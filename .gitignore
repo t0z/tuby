@@ -1,0 +1,11 @@
+.project
+.pydevproject
+.settings/
+*.swp
+*.pyc
+toby/*.pyc
+build/
+dist/
+env/
+tuby.egg-info/
+

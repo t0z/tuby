@@ -24,16 +24,16 @@ packages = [
     'tuby',
 ]
 
-package_data = {
-}
+package_data = {}
 
-requires = [
-]
-scripts = ['script/tuby']
+requires = []
+
+scripts = ['script/tuby', 'script/tuby-minify-modules']
+
 data_files = [
     ('module', [m for m in tuby.module_list(".")]),
 ]
-print "data_files: %s" % data_files
+
 classifiers = [
     #        'Development Status :: 4 - Beta',
     #        'Environment :: Web Environment',

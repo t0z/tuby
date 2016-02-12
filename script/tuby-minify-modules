@@ -1,0 +1,18 @@
+#!/usr/bin/env python2.7
+import sys
+from tuby.core import modpath, readfile
+from tuby.mini import mini
+import os
+
+if __name__ == '__main__':
+    for dpath, dnames, filenames in os.walk(modpath):
+        for fn in filenames:
+            if not fn.endswith('.py'):
+                continue
+            #print "+ %s" % fn
+            path = os.path.join(modpath, fn)
+            source = mini(readfile(path))
+            dest = '%spyz' % path[:-2]
+            print dest
+            
+            sys.exit(0)

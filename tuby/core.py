@@ -43,15 +43,24 @@ class Unbuffered(object):
 
 class TubyStream(object):
 
-    def __init__(self, names=['stdin', 'stdout', 'stderr']):
+    def __init__(self, names=['stdin', 'stdout', 'stderr'], debug=True):
+        self.debug = debug
         for name in names:
             setattr(self, name, Unbuffered(getattr(sys, name)))
+
+    def log(self, *a):
+        if not self.debug:
+            return
+        if len(a) > 1:
+            self.stderr.write(a[0] % a[1:] + '\n')
+        else:
+            self.stderr.write(a[0] + '\n')
 
 
 class ModuleLoader(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, debug=True):
+        self.debug = True
 
     def exists(self, name):
         if Path.exists(_mkmodfn(name)):
@@ -65,7 +74,7 @@ class ModuleLoader(object):
         if not self.exists(name):
             raise RuntimeError('Module not found: %s' % _mkmodfn(name))
         content = self.load(name)
-        local = {'TUBY': TubyStream()}
+        local = {'TUBY': TubyStream(debug=self.debug)}
         if stdin is not None:
             local['TUBY'].stdin = stdin
         try:
@@ -75,8 +84,8 @@ class ModuleLoader(object):
         return local
 
 
-def main(name='tb-list', stdin=None):
+def main(name='tb-list', stdin=None, debug=True):
     name = name.replace('-', '_')
-    ml = ModuleLoader()
+    ml = ModuleLoader(debug=debug)
     result = ml.execute(name, stdin=stdin)
     return result

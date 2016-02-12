@@ -1,9 +1,10 @@
 from os import path as Path
 from flask import Flask
-from tuby.core import modpath, readfile
+from tuby.core import modpath, readfile, basepath
 import base64
 import binascii
 import ast
+from tuby.mini import mini
 
 debug = True
 app = Flask(__name__)
@@ -17,14 +18,15 @@ class Err(object):
 
 @app.route("/<modname>", methods=methods)
 def serv_module(modname):
-    path = Path.join(modpath, '%s.py' % modname)
-    # print('path: %s' % path)
-    if not Path.exists(path):
-        return Err.file_not_found
-    tree = ast.parse(readfile(path))
-    code = compile(tree, filename='<ast>', mode='exec')
-    # return 'foo: %s' % type(txt), 200
-    return base64.b64encode(code.co_code), 200
+    modname = modname.decode('utf8').strip().replace(u'.', u'_')
+    print modname
+    for storepath in [modpath, Path.join(basepath, Path.pardir, 'smodule')]:
+        path = Path.join(storepath, u'%s.py' % modname)
+        # print('path: %s' % path)
+        if not Path.exists(path):
+            continue
+        return mini(readfile(path))
+    return Err.file_not_found
 
 if __name__ == "__main__":
     app.run(debug=debug)

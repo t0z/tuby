@@ -1,11 +1,15 @@
 from os import path as Path, walk
 import sys
+import urllib
+import bz2
+import base64
 
 __version__ = '0.1'
 __progname__ = 'tuby'
 __description__ = 'pipe python snippet'
 __author__ = 't0z'
 __email__ = 't0z'
+__update_url__ = 'http://localhost:5000'
 
 basepath = Path.abspath(Path.join(Path.dirname(__file__), Path.pardir))
 modpath = Path.join(basepath, 'module')
@@ -26,6 +30,16 @@ def module_list(path):
 
 def _mkmodfn(name):
     return Path.join(modpath, '%s.py' % name)
+
+
+def GET(url, data=None):
+    print('url: %s' % url)
+    rh = urllib.urlopen(url, data)
+    if rh.code != 200:
+        print "HTTP error: %s" % rh.code
+    else:
+        for line in rh:
+            yield line.decode('utf8', errors="ignore")
 
 
 class Unbuffered(object):
@@ -58,9 +72,20 @@ class TubyStream(object):
 
 
 class ModuleLoader(object):
+    class Site(object):
+        @classmethod
+        def update(cls, name, cache=None):
+            return bz2.decompress(base64.b64decode(
+                    ''.join([l for l in GET(__update_url__ + '/' + name)])))
+
+        @classmethod
+        def local(cls, name, cache=None):
+            return compile(readfile(_mkmodfn(name), '<string>', 'exec'))
 
     def __init__(self, debug=True):
         self.debug = True
+        self.stores = [self.Site.update]
+        self.cache = {}
 
     def exists(self, name):
         if Path.exists(_mkmodfn(name)):
@@ -68,12 +93,28 @@ class ModuleLoader(object):
         return False
 
     def load(self, name):
-        return compile(readfile(_mkmodfn(name)), '<string>', 'exec')
+        source = None
+        if name in self.cache:
+            return self.cache[name]
+        for code in self.stores:
+            source = code(name, cache=self.cache)
+            print source
+            if source is not None:
+                self.cache[name] = source
+                return source
+#         if method == 'site':
+#             return compile(readfile(_mkmodfn(name)), '<string>', 'exec')
+#         else:
+#             return GET(__update_url__ + '/' + name)
+        return None
 
     def execute(self, name, stdin=None):
         if not self.exists(name):
-            raise RuntimeError('Module not found: %s' % _mkmodfn(name))
-        content = self.load(name)
+            content = self.load(name)
+            if content is None:
+                raise RuntimeError('Module not found: %s' % _mkmodfn(name))
+        else:
+            content = self.load(name)
         local = {'TUBY': TubyStream(debug=self.debug)}
         if stdin is not None:
             local['TUBY'].stdin = stdin

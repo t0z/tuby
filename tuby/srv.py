@@ -22,11 +22,10 @@ def serv_module(modname):
     print modname
     for storepath in [modpath, Path.join(basepath, Path.pardir, 'smodule')]:
         path = Path.join(storepath, u'%s.py' % modname)
-        # print('path: %s' % path)
         if not Path.exists(path):
             continue
         return mini(readfile(path))
     return Err.file_not_found
 
 if __name__ == "__main__":
-    app.run(debug=debug)
+    app.run(host="0.0.0.0", debug=debug)

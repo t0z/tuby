@@ -1,6 +1,5 @@
-from pyminifier import minification, compression, analyze
+from pyminifier import minification, analyze
 import re
-import sys
 pat_blob = re.compile(r"^.*\('(.*)'\).*$")
 
 
@@ -26,10 +25,7 @@ def bz2_pack(source):
     if analyze.shebang.match(first_line):
         out = first_line + '\n'
     compressed_source = bz2.compress(source.encode('utf-8'))
-#     out += 'import bz2, base64\n'
-#     out += "exec(bz2.decompress(base64.b64decode('"
     out += base64.b64encode(compressed_source).decode('utf-8')
-#     out += "')))\n"
     return out
 
 
@@ -42,12 +38,4 @@ def mini(source):
                    'dedent'
                    ]:
         source = getattr(minification, action)(source)
-#     print source
-    
-    source = bz2_pack(source) # .split('\n')[1]
-#     m = pat_blob.match(source)
-#     if m is None:
-#         raise NoMatchError()
-#     return m.group(1)
-#     print source
-    return source
+    return bz2_pack(source)

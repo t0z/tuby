@@ -98,14 +98,9 @@ class ModuleLoader(object):
             return self.cache[name]
         for code in self.stores:
             source = code(name, cache=self.cache)
-            print source
             if source is not None:
                 self.cache[name] = source
                 return source
-#         if method == 'site':
-#             return compile(readfile(_mkmodfn(name)), '<string>', 'exec')
-#         else:
-#             return GET(__update_url__ + '/' + name)
         return None
 
     def execute(self, name, stdin=None):

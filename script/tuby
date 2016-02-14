@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+
 import sys
 from tuby import main
 
@@ -19,4 +20,4 @@ if __name__ == '__main__':
         print 'Got Ctrl-C, interrupting.'
     except Exception as e:
         print 'Error: %s' % e
-sys.exit(0)
+    sys.exit(0)

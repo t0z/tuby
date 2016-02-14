@@ -11,6 +11,6 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect(ADDR)
 for data in TUBY.stdin:
     s.send(data)
-data = s.recv(1024)
+data = s.recv(65535)
 s.close()
 TUBY.stdout.write(data)

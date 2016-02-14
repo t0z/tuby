@@ -12,17 +12,18 @@ s.bind(ADDR)
 s.listen(1)
 while True:
     conn, addr = s.accept()
-    TUBY.stdout.write(u'Listening: %s\n' % str(addr))
+    TUBY.stdout.write(u'client connected: %s\n' % str(addr))
     data = ''
     while True:
         data += conn.recv(1024)
         if not data:
             conn.close()
-            print('die')
+            print(u'+ client disconnected: %s' % str(addr))
             break
-        if not data.find('\n'):
-            continue
+#         if not data.find('\n'):
+#             continue
         TUBY.stdout.write(data + '\n')
         data = ''
+    TUBY.stdout.write(data + '\n')
     conn.close()
 s.close()

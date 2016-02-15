@@ -1,7 +1,11 @@
 from os import path as Path
+import ssl  # @UnusedImport
+import logging
+
 from flask import Flask
 from flask import request, Response
-import logging
+from flask_restful import reqparse
+
 from tuby.core import modpath, readfile, basepath
 from tuby.mini import mini
 
@@ -11,11 +15,22 @@ log.setLevel(logging.DEBUG)
 
 app = Flask(__name__)
 methods = ['GET', 'POST']
+location = ['headers', 'values', 'json']
 debug = True
+httpd_root_path = '/tuby'
 
 log.debug('listening on %s:%s', app.config.get('host'), app.config.get('port'))
 
 MIME_RESPONSE = 'application/json'
+
+
+def request_parser(req):
+    parser = reqparse.RequestParser(bundle_errors=True)
+
+    def addarg(name, *a, **ka):
+        parser.add_argument(name, location=location, *a, **ka)
+    addarg('_', required=True)
+    return parser.parse_args(req=req, strict=True)
 
 
 class Err(object):
@@ -23,18 +38,19 @@ class Err(object):
     file_not_found = ('File not found', 404)
 
 
-@app.route('/tuby', methods=methods)
-def serv_tuby():
-        path = Path.join(basepath, 'tuby', 'core.py')
-        if Path.exists(path):
-            return Response(mini(readfile(path)), mimetype=MIME_RESPONSE)
-        return Err.file_not_found, 404
-
-
-@app.route('/<modname>', methods=methods)
-def serv_module(modname):
-    modname = modname.decode('utf8').strip().replace(u'.', u'_')
+@app.route(httpd_root_path, methods=methods)
+@app.route('%s/<modname>' % httpd_root_path, methods=methods)
+def serv_module(modname=None):
     log.debug('%s: %s', request.method, modname)
+    if modname is None:
+        args = request_parser(request)
+        modname = args._
+    modname = modname.decode('utf8').strip().replace(u'.', u'_')
+    if modname == '_':
+        path = Path.join(basepath, 'tuby', 'core.py')
+        if not Path.exists(path):
+            return Err.file_not_found, 404
+        return Response(mini(readfile(path)), mimetype=MIME_RESPONSE)
     path = None
     for storepath in [modpath, Path.abspath(Path.join(basepath, Path.pardir,
                                                       'smodule'))]:
@@ -48,17 +64,18 @@ def serv_module(modname):
     return Err.file_not_found
 
 
-def gen_ssl_context(path='../data'):
-    return None
+def gen_ssl_context(path='../data/cert'):
     path = Path.abspath(path)
     ctx = []
-    for filename in ['cert.crt', 'key.key']:
+    for filename in ['server.crt', 'server.key']:
         fpath = Path.join(path, filename)
         if not Path.exists(fpath):
             print('file not found: %s' % fpath)
             return None
         ctx.append(fpath)
-    return ctx
+    return (ctx[0], ctx[1])
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=debug, ssl_context=gen_ssl_context())
+    ssl_context = gen_ssl_context()
+    print "ssl context: %s %s" % ssl_context
+    app.run(host='0.0.0.0', port=5000, debug=debug, ssl_context=ssl_context)

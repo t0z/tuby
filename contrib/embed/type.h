@@ -4,5 +4,6 @@
 typedef char 	CHAR;
 typedef char *	STRING;
 typedef int  *	INT;
+typedef int BOOL;
 
 #endif

@@ -14,7 +14,6 @@ int http_get(const char *addr, const int port, const char *path, char *content, 
     int socket_desc;
     struct sockaddr_in server;
     char *message = "GET /tuby HTTP/1.1\r\n\r\n";
-    char *server_reply[HTTP_CONTENT_MAXSIZE];
 
     printf("GET http://%s:%i/%s\n", addr, port, path);
     //Create socket
@@ -51,13 +50,11 @@ int http_get(const char *addr, const int port, const char *path, char *content, 
     puts("Data Send\n");
 
     //Receive a reply from the server
-    if( recv(socket_desc, server_reply , HTTP_CONTENT_MAXSIZE , 0) < 0)
+    if( recv(socket_desc, content , HTTP_CONTENT_MAXSIZE , 0) < 0)
     {
         puts("recv failed");
     }
     puts("Reply received\n");
-    puts(server_reply);
-    strcpy(message, server_reply);
     return 0;
 }
 

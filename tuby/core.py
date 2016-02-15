@@ -3,6 +3,7 @@ import sys
 import urllib
 import bz2
 import base64
+import logging
 
 __version__ = '0.1'
 __progname__ = 'tuby'
@@ -10,12 +11,18 @@ __description__ = 'pipe python snippet'
 __author__ = 't0z'
 __email__ = 't0z'
 __update_urls__ = [
-    ('armored', 'http://localhost:5000/%s'),
+    ('armored', 'http://localhost:5000/tuby/%s'),
     ('raw', 'https://raw.githubusercontent.com/t0z/tuby/master/module/%s.py',),
 ]
 
-if __file__ is None:
-    __file__ = '__memory__'
+logging.basicConfig()
+log = logging.getLogger('tuby')
+log.setLevel(logging.ERROR)
+
+try:
+    __file__
+except:
+    __file__ = Path.expanduser('~')  # @ReservedAssignment
 
 basepath = Path.abspath(Path.join(Path.dirname(__file__), Path.pardir))
 modpath = Path.join(basepath, 'module')
@@ -41,19 +48,19 @@ def _mkmodfn(name):
 def get_ssl_context():
     try:
         import ssl
-        from ssl import Purpose
         ctx = ssl.SSLContext(ssl.CERT_OPTIONAL)
+        log.info('SSL context created')
         return ctx
     except Exception as e:
-        print('- SSL certificate error: %s' % e)
+        log.error('- SSL certificate error: %s', e)
     return None
 
 
 def GET(url, data=None):
-    print('url: %s' % url)
+    log.debug('url: %s', url)
     rh = urllib.urlopen(url, data, context=get_ssl_context())
     if rh.code != 200:
-        print "HTTP error: %s" % rh.code
+        log.error("HTTP error: %s", rh.code)
     else:
         for line in rh:
             yield line.decode('utf8', errors="ignore")
@@ -74,7 +81,8 @@ class Unbuffered(object):
 
 class Streams(object):
 
-    def __init__(self, stdin=None, names=['stdin', 'stdout', 'stderr'], debug=True):
+    def __init__(self, stdin=None, names=['stdin', 'stdout', 'stderr'],
+                 debug=True):
         self.debug = debug
         for name in names:
             setattr(self, name, Unbuffered(getattr(sys, name)))
@@ -130,7 +138,7 @@ class ModuleLoader(object):
         return False
 
     def load(self, name):
-        print('name: %s' % name)
+        log.info('+ Loading module: %s' % name)
         source = None
         if name in self.cache:
             return self.cache[name]
@@ -147,39 +155,38 @@ class ModuleLoader(object):
                 raise RuntimeError('Module not found: %s' % _mkmodfn(name))
         else:
             content = self.load(name)
-        local = {
-            'TUBY': Streams(debug=self.debug)
-        }
+        local = {'TUBY': Streams(debug=self.debug)}
         if stdin is not None:
             local['TUBY'].stdin = stdin
         try:
             exec content in local
         except Exception as e:
-            print "Error: %s" % e
+            log.error("Error: %s", e)
         return local
 
 
-def main(name='tb-list', stdin=None, debug=True):
-    name = name.replace('-', '_')
+def main(name='tb-list', stdin=None, debug=False):
+    argv = []
+    if debug is True:
+        log.setLevel(logging.DEBUG)
+    try:
+        argv.extend(sys.argv)
+    except:
+        argv.append(Path.expanduser('~'))
+    if stdin is None:
+        stdin = sys.stdin
+    modname = 'tb-help'
+    log.debug('argv: %s', argv)
+    numarg = len(argv)
+    if numarg > 1:
+        modname = argv[1]
+    if numarg > 2:
+        if argv[2] != '-':
+            stdin = open(argv[2], 'rb')
+    modname = modname.replace('-', '_')
     ml = ModuleLoader(debug=debug)
-    result = ml.execute(name, stdin=stdin)
+    result = ml.execute(modname, stdin=stdin)
     return result
 
 if __name__ == '__main__':
-    argv = []
-    argv.extend(sys.argv)
-    stdin = sys.stdin
-    name = 'tb-help'
-    numarg = len(argv)
-    if numarg > 1:
-        name = sys.argv[1]
-    if numarg > 2:
-        if sys.argv[2] != '-':
-            stdin = open(sys.argv[2], 'rb')
-    try:
-        main(name, stdin=stdin)
-    except KeyboardInterrupt:
-        print 'Got Ctrl-C, interrupting.'
-    except Exception as e:
-        print 'Error: %s' % e
-    sys.exit(0)
+    main(debug=True)

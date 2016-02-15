@@ -7,9 +7,12 @@
 
 #include "const.h"
 
-typedef char* TEXT;
+typedef char *TEXT;
+typedef TEXT PTEXT;
 
+int txt_free(TEXT txt);
 TEXT txt_init(TEXT src);
-int txt_concat(TEXT txt, TEXT src);
+TEXT txt_concat(PTEXT txt, TEXT src);
+int txt_size(TEXT txt);
 
 #endif

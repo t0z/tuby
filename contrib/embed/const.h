@@ -13,7 +13,7 @@
 #endif
 
 #ifndef NULL
-#define NULL 0
+#define NULL 0 //((void *)0)
 #endif
 
 #ifndef TRUE

@@ -17,10 +17,9 @@ app = Flask(__name__)
 methods = ['GET', 'POST']
 location = ['headers', 'values', 'json']
 debug = True
-httpd_root_path = '/tuby'
-use_ssl = False
+httpd_root_path = '/'
+use_ssl = True
 
-log.debug('listening on %s:%s', app.config.get('host'), app.config.get('port'))
 
 MIME_RESPONSE = 'application/json'
 
@@ -40,7 +39,7 @@ class Err(object):
 
 
 @app.route(httpd_root_path, methods=methods)
-@app.route('%s/<modname>' % httpd_root_path, methods=methods)
+@app.route('%s<modname>' % httpd_root_path, methods=methods)
 def serv_module(modname=None):
     log.debug('%s: %s', request.method, modname)
     if modname is None:
@@ -81,4 +80,4 @@ def gen_ssl_context(path='../data/cert', use_ssl=True):
 if __name__ == '__main__':
     ssl_context = gen_ssl_context(use_ssl=use_ssl)
     print "ssl context: %s" % str(ssl_context)
-    app.run(host="0.0.0.0", port=5000, debug=debug)# ssl_context=ssl_context)
+    app.run(host="0.0.0.0", port=5000, debug=debug, ssl_context=ssl_context)

@@ -17,18 +17,6 @@ lf = '\n'
 __numproc_resolve__ = 3
 
 
-def sd(*a):
-    if DEBUG:
-        s(*a)
-
-
-def s(*a):
-    if len(a) > 1:
-        TUBY.stdout.write(a[0] % a[1:] + lf)
-    else:
-        TUBY.stdout.write(a[0] + lf)
-
-
 def clean_word(word):
     pos = len(word) - 1
     if word[pos] in [':', '=']:
@@ -62,9 +50,9 @@ def readfile(path, filename):
                         else:
                             aw[word] = 1
                     except Exception:
-                        sd(u'Error word: %s', word)
+                        TUBY.log(u'Error word: %s', word)
     except Exception as e:
-        sd(u'Exception: %s', e)
+        TUBY.log(u'Exception: %s', e)
     for k in aw.keys():
         TUBY.stdout.write(str(aw[k]) + u' ' + k + '\n')
 
@@ -120,7 +108,7 @@ stat_files = Value('i', 0)
 
 """Listing file to read"""
 for dirin in TUBY.stdin:
-    sd(u'+ input directory: %s', dirin.strip())
+    TUBY.log(u'+ input directory: %s', dirin.strip())
     p = Process(target=fill, args=(dirin.strip(),))
     p.daemon = False
     p.start()

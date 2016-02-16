@@ -4,6 +4,7 @@ import urllib
 import bz2
 import base64
 import logging
+import ssl
 
 __version__ = '0.1'
 __progname__ = 'tuby'
@@ -11,7 +12,7 @@ __description__ = 'pipe python snippet'
 __author__ = 't0z'
 __email__ = 't0z'
 __update_urls__ = [
-    ('armored', 'http://localhost:5000/tuby/%s'),
+    ('armored', 'https://localhost:5000/%s'),
     ('raw', 'https://raw.githubusercontent.com/t0z/tuby/master/module/%s.py',),
 ]
 
@@ -47,8 +48,15 @@ def _mkmodfn(name):
 
 def get_ssl_context():
     try:
-        import ssl
-        ctx = ssl.SSLContext(ssl.CERT_OPTIONAL)
+        # context.wrap_socket(socket.socket(socket.AF_INET),
+        #                    ...
+        #         ctx = ssl.SSLContext(ssl.Purpose.CLIENT_AUTH)
+#         ctx = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+#         ctx.verify_mode = ssl.CERT_OPTIONAL
+#         ctx.check_hostname = False
+#         ctx.load_verify_locations("/etc/ssl/certs/ca-bundle.crt")
+#         ctx.verify_mode = ssl.CERT_OPTIONAL
+        return ssl._create_unverified_context()
         log.info('SSL context created')
         return ctx
     except Exception as e:

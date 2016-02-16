@@ -2,15 +2,21 @@
 #define __TUBY_HTTP_H__
 
 #include <stdio.h>
-#include <string.h>    //strlen
+#include <string.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <arpa/inet.h> //inet_addr
 
-#include "const.h"
-#include "ssl.h"
+#include "text.h"
 
-int http_get(const char *addr, int const port, const char *path, char *content,
-		const int content_maxsize);
+#include <curl/curl.h>
+#include "text.h"
+
+struct MemoryStruct {
+	char *memory;
+	size_t size;
+};
+
+void http_init(void);
+int http_post(TEXT url, TEXT data, TEXT *body);
+void http_end(void);
 
 #endif

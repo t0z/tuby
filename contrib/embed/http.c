@@ -1,83 +1,87 @@
 #include "http.h"
-#ifdef __linux__
 
-//void * xmalloc(size_t size)
-//{
-//	void *value = malloc(size);
-//	if (0 == value) {
-//		fatal("virtual memory exhausted");
-//	}
-//}
-
-int http_get(const char *addr, const int port, const char *path, char *content, const int content_maxsize)
-{
-	int socket_desc;
-	BIO *outbio = NULL;
-	struct sockaddr_in server;
-	size_t str_maxsize = 1024;
-	char message[str_maxsize + 1];
-	char fmt_message[] = "GET %s HTTP/1.1\n\n\r";
-	size_t count = snprintf(message, str_maxsize, fmt_message, path);
-	message[str_maxsize] = '\0';
-	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-	if (socket_desc == -1)
-	{
-		printf("Could not create socket\n");
-		return 1;
-	}
-	server.sin_addr.s_addr = inet_addr(addr);
-	server.sin_family = AF_INET;
-	server.sin_port = htons( port );
-	if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
-	{
-		puts("connect error");
-		return 1;
-	}
-	if(send(socket_desc , message , strlen(message) , 0) < 0)
-	{
-		puts("Send failed\n");
-		return 1;
-	}
-	puts("Data Send\n");
-	size_t buffer_size = 1;
-	char buffer[buffer_size];
-	//Receive a reply from the server
-	size_t recv_size = 0;
-	size_t recv_total = 0;
-	int INBODY = 0;
-	char last_char = ' ';
-	char curchar[1] = "\0";
-	int count_carriage = 0;
-	int count_newline = 0;
-	TEXT current = txt_init("");
-	curchar[1] = '\0';
-	while((recv_size = recv(socket_desc, curchar , 1, 0)) > 0) {
-		if (curchar[0] == '\n') {
-			count_newline += 1;
-			if (INBODY) {
-				txt_concat(current, curchar);
-			} else {
-				if (count_carriage == 1 && count_newline == 2) {
-					INBODY = 1;
-				} else {
-					printf("header: %s\n", current);
-				}
-				txt_free(current);
-				current = txt_init("");
-			}
-		} else if (curchar[0] == '\r') {
-			count_carriage +=1;
-		} else {
-			count_carriage = 0;
-			count_newline = 0;
-			txt_concat(current, curchar);
-		}
-		recv_total += recv_size;
-	}
-	content = txt_init(current);
-	txt_free(current);
-	printf("Reply received: total: %i\n", (int)recv_total);
-	return E_SUCCESS;
+void http_init(void) {
+	curl_global_init(CURL_GLOBAL_ALL);
 }
 
-#endif
+void http_end(void) {
+	curl_global_cleanup();
+}
+
+static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb,
+		void *userp) {
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *) userp;
+
+	mem->memory = realloc(mem->memory, mem->size + realsize + 1);
+	if (mem->memory == NULL) {
+		/* out of memory! */
+		printf("not enough memory (realloc returned NULL)\n");
+		return 0;
+	}
+
+	memcpy(&(mem->memory[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->memory[mem->size] = 0;
+
+	return realsize;
+}
+
+int http_post(TEXT url, TEXT data, TEXT *body) {
+	DLOG("http POST %s === %s", url, data);
+	CURL *curl;
+	CURLcode res;
+	struct MemoryStruct chunk;
+
+	/* will be grown as needed by the realloc above */
+	chunk.memory = malloc(1);
+	if (NULL == chunk.memory) {
+		ELOG("curl: failed to init memory");
+		return 1;
+	}
+	chunk.size = 0; /* no data at this point */
+	/* get a curl handle */
+	curl = curl_easy_init();
+	if (!curl) {
+		ELOG("curl: fail to initialize");
+		free(chunk.memory);
+		return CURLE_FAILED_INIT;
+	}
+//#ifdef SKIP_PEER_VERIFICATION
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+//#endif
+//#ifdef SKIP_HOSTNAME_VERIFICATION
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+//#endif
+	/* First set the URL that is about to receive our POST. This URL can
+	 just as well be a https:// URL if that is what should receive the
+	 data. */
+	curl_easy_setopt(curl, CURLOPT_URL, url);
+	/* Switch on full protocol/debug output while testing */
+	curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	/* disable progress meter, set to 0L to enable and disable debug output */
+	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+	/* send all data to this function  */
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+	/* we pass our 'chunk' struct to the callback function */
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &chunk);
+	/* some servers don't like requests that are made without a user-agent
+	 field, so we provide one */
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+	/* Now specify the POST data */
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+	/* Perform the request, res will get the return code */
+	res = curl_easy_perform(curl);
+	/* Check for errors */
+	if (res != CURLE_OK) {
+		fprintf(stderr, "curl_easy_perform() failed: %s\n",
+				curl_easy_strerror(res));
+		free(chunk.memory);
+		curl_easy_cleanup(curl);
+		return res;
+	}
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, data);
+	curl_easy_cleanup(curl);
+	*body = chunk.memory;
+	return CURLE_OK;
+}

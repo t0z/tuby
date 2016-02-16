@@ -7,12 +7,15 @@
 
 #include "const.h"
 
-typedef char *TEXT;
-typedef TEXT PTEXT;
+#define TXT_CHUNK_SIZE 1024
+#define TXT_MAX_SIZE 65535
+
+typedef char * TEXT;
 
 int txt_free(TEXT txt);
 TEXT txt_init(TEXT src);
-TEXT txt_concat(PTEXT txt, TEXT src);
+int txt_concat(TEXT txt, TEXT src);
 int txt_size(TEXT txt);
 
 #endif
+

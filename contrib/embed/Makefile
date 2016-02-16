@@ -1,8 +1,10 @@
-CFLAGS=-Os -Wall -fdata-sections -ffunction-sections $(shell pkg-config --cflags --libs python2,openssl)
-CFLAGS=-Os -Wall $(shell pkg-config --cflags --libs python2,openssl)
-LDFLAGS=-Wl,--gc-sections
+DEBUG=-DDEBUG
+#CFLAGS=-Os -Wall -fdata-sections -ffunction-sections\
+	$(shell pkg-config --cflags --libs python2,openssl,libcurl)
+CFLAGS=-Wall -L/usr/lib $(shell pkg-config --static --cflags --libs python2,libcurl)
+#LDFLAGS=-Wl,--gc-sections
 LDFLAGS=
-CC=gcc
+CC=gcc $(DEBUG)
 SRC=$(shell ls *.c)
 OBJ=$(SRC:.c=.o)
 PROGNAME=emby
